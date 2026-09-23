@@ -1,0 +1,116 @@
+# config for image generation
+defaults:
+  - _self_
+
+exp_name: "incremental_b2diffu_rl"
+seed: 42
+save_path: "./model/lora"
+mixed_precision: "fp16"
+allow_tf32: false
+use_lora: true
+resume_id: "" #wandb run id to resume from
+dev_id: 0
+
+
+pipeline:
+  continue_from_stage: 0
+  stage_cnt: 100
+  split_step_left: 14
+  split_step_right: 20
+  save_interval: 2
+  sleep_between_stages: 2
+
+# Split settings (will be calculated per stage) for b2diffu-rl method
+split_step: 14
+split_time: 3
+
+# Prompt settings
+prompt: ""
+prompt_file: "configs/prompt/template1_train.json"
+prompt_random_choose: 1
+reward_fn: "clip"
+
+# Pretrained model
+pretrained:
+  model: "CompVis/stable-diffusion-v1-4"
+  revision: "main"
+
+# Sampling configuration
+sample:
+  num_steps: 20 # total number of denoising steps T
+  cfg: true
+  guidance_scale: 5.0
+  beta: 1.0
+  eta: 1.0
+  batch_size: 16
+  num_batches_per_epoch: 16
+  save_interval: 2
+  no_branching: false
+  no_selection: false
+  normalize_all: false # if true uses the stat of the whole batch for norm instead of the per prompt reward norm
+  fk: false
+  num_particles: 4
+  only_best_fk: false
+  fk_mix_ratio: 1  # For mixed sampling: 0.0=all vanilla, 1.0=all FK, 0.5=50/50 mix
+  resample_frequency: 5
+  resampling_t_start: 5
+  resampling_t_end: 15
+  potential_type: "max" # "diff", "rt"
+  fk_lambda: 2.0
+  brach_at_before_fk: -1
+  always_branch_at: -1
+  fk_then_branch_at: -1
+  save_train_samples_no_train: false # whether to save the samples generated in the sampling stage without training or not (for visualization)
+
+train:
+  batch_size: 16
+  use_8bit_adam: false
+  learning_rate: 3e-4
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_weight_decay: 0.0001
+  adam_epsilon: 0.00000001
+  gradient_accumulation_steps: 8
+  max_grad_norm: 1.0
+  num_inner_epochs: 1
+  cfg: true
+  timestep_fraction: 1.0
+  alpha: 1.0
+  beta: 0
+  beta1: 1
+  beta2: 1
+  eps: 1e-4
+  num_epochs: 2
+  adv_clip_max: 5
+  save_interval: 2
+  num_checkpoint_limit: 21
+  incremental_training: false
+  only_train_steps: -1 # if paired with incremental_training, any n timesteps training
+  uniformly_sample_timesteps: false # if if paired with incremental_training, sample the timesteps uniformly instead of choosing randomly
+  incremental_timesteps: [5,10,15,20]
+  num_stages_per_increment: 10
+  bpt: "default" # "custom" / anything else for default b2 paper's
+  only_last_n_steps: -1 # if > 0, only train the last n steps
+  use_kl_div_loss: false  # if true, add KL regularizer loss against the frozen pretrained unet
+  rl_loss_weight: 10.0     # weight for the RL (PPO) loss term, only used when use_kl_div_loss is true
+  kl_weight: 0.01         # weight for the KL regularizer loss term
+
+
+# Evaluation & Selection configuration
+eval:
+  pos_threshold: 0.5  # PosThreshold from bash script
+  neg_threshold: -0.5  # NegThreshold from bash script
+  history_cnt: 8  # History_Cnt from bash script
+
+wandb:
+  entity: ""
+  project: "iADD"
+  enabled: true
+  log_model: false
+
+hydra:
+  run:
+    dir: logs/${exp_name}/${now:%Y-%m-%d_%H-%M-%S}
+  sweep:
+    dir: logs/${exp_name}
+    subdir: ${hydra.job.num}
