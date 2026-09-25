@@ -1,0 +1,14 @@
+# Phase-2 (LLaDA-8B) environment. Python 3.10+.
+# Versions are floors, not pins -- confirm exact working versions on the
+# rented box and freeze them once smoke_llada.py passes.
+
+torch>=2.4.0
+transformers>=4.44.0
+accelerate>=0.33.0
+peft>=0.12.0
+sentencepiece
+safetensors
+einops
+math-verify
+numpy
+tqdm
